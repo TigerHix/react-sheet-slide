@@ -5,7 +5,8 @@ import React, {
   useCallback,
   useState,
   useEffect,
-  useRef
+  useRef,
+  useImperativeHandle
 } from 'react'
 import { animated } from '@react-spring/web'
 import { rubberbandIfOutOfBounds, useDrag } from '@use-gesture/react'
@@ -33,7 +34,8 @@ import type {
   SelectedDetentsProps,
   Detents,
   PredefinedDetents,
-  SelectedDetent
+  SelectedDetent,
+  SheetPositionData
 } from './types'
 
 const Notch: React.FC<{ className?: string }> = props => (
@@ -120,6 +122,8 @@ type BaseProps = {
   useDarkMode?: boolean
   velocity?: number
   backdropClassName?: string
+  onPositionChange?: (data: SheetPositionData) => void
+  onDetentChange?: (detent: string) => void
 }
 
 type InteralSheetProps = Callbacks & BaseProps & { close: () => void }
@@ -190,7 +194,15 @@ if (__isDev__) {
   DragHeader.displayName = 'DragHeader'
 }
 
-const BaseSheet = forwardRef<HTMLDivElement, InteralSheetProps>(
+export interface SheetRef {
+  setDetent: (detentName: string) => void
+}
+
+export interface BaseSheetRef extends SheetRef {
+  element: HTMLDivElement | null
+}
+
+const BaseSheet = forwardRef<BaseSheetRef, InteralSheetProps>(
   (
     {
       open,
@@ -205,6 +217,8 @@ const BaseSheet = forwardRef<HTMLDivElement, InteralSheetProps>(
       useDarkMode: useDarkModeInitial,  
       velocity = 1,
       backdropClassName,
+      onPositionChange,
+      onDetentChange,
       ...rest
     },
     ref
@@ -361,6 +375,67 @@ const BaseSheet = forwardRef<HTMLDivElement, InteralSheetProps>(
         })
       }
     }, [maxHeight, maxSnap, minSnap, set, ready])
+
+    const elementRef = useRef<HTMLDivElement>(null)
+
+    // Expose setDetent method via ref
+    useImperativeHandle(ref, () => ({
+      element: elementRef.current,
+      setDetent: (detentName: string) => {
+        if (!ready || !isOpenRef.current) return
+        
+        // Get the target detent value
+        const detentValues = getDetents({
+          headerHeight: headerRef.current?.offsetHeight || 0,
+          footerHeight: footerRef.current?.offsetHeight || 0,
+          height: maxHeightRef.current || 0,
+          minHeight: minSnapRef.current || 0,
+          maxHeight: maxHeightRef.current || 0
+        })
+        
+        const detentsArray = Array.isArray(detentValues) ? detentValues : [detentValues]
+        let targetSnap: number
+        
+        if (detentName === 'large' && detentsArray.length >= 2) {
+          targetSnap = detentsArray[1] // Large detent (higher Y value)
+        } else if (detentName === 'medium' && detentsArray.length >= 1) {
+          targetSnap = detentsArray[0] // Medium detent (lower Y value)
+        } else {
+          // Fallback to finding the snap
+          targetSnap = findSnapRef.current(heightRef.current)
+        }
+        
+        // Animate to the target detent
+        heightRef.current = targetSnap
+        lastDetentRef.current = targetSnap
+        set({
+          y: targetSnap,
+          ready: 1,
+          maxHeight: maxHeightRef.current,
+          maxSnap: maxSnapRef.current,
+          minSnap: minSnapRef.current,
+          immediate: prefersReducedMotion
+        })
+        
+        // Call position callbacks
+        if (onPositionChange && maxHeightRef.current && maxSnapRef.current && minSnapRef.current) {
+          const activeDetent = detentName
+          const progress = detentName === 'large' ? 1 : 0
+          
+          onPositionChange({
+            y: targetSnap,
+            height: maxHeightRef.current - targetSnap,
+            activeDetent,
+            progress
+          })
+          
+          if (onDetentChange) {
+            onDetentChange(activeDetent)
+          }
+        }
+      }
+    }), [ready, getDetents, set, prefersReducedMotion, onPositionChange, onDetentChange])
+
     const handleDrag = ({
       args: [{ closeOnTap = false, isContentDragging = false } = {}] = [],
       cancel,
@@ -447,6 +522,54 @@ const BaseSheet = forwardRef<HTMLDivElement, InteralSheetProps>(
           y,
           config: { velocity }
         })
+
+        // Call position tracking callbacks
+        if (onPositionChange && maxHeightRef.current && maxSnapRef.current && minSnapRef.current) {
+          const detentValues = getDetents({
+            headerHeight: headerRef.current?.offsetHeight || 0,
+            footerHeight: footerRef.current?.offsetHeight || 0,
+            height: maxHeightRef.current,
+            minHeight: minSnapRef.current,
+            maxHeight: maxHeightRef.current
+          })
+
+          const detents = Array.isArray(detentValues) ? detentValues : [detentValues]
+          let activeDetent = 'medium'
+          let progress = 0
+
+          // Find closest detent
+          if (detents.length >= 2) {
+            const smallerDetent = detents[0] // Lower Y value (more collapsed)  
+            const largerDetent = detents[1]  // Higher Y value (more expanded)
+            
+            if (y <= smallerDetent) {
+              // Sheet is collapsed (medium detent) - smaller Y value
+              activeDetent = 'medium'
+              progress = 0
+            } else if (y >= largerDetent) {
+              // Sheet is expanded (large detent) - larger Y value
+              activeDetent = 'large'
+              progress = 1
+            } else {
+              // Between detents - calculate progress from collapsed (0) to expanded (1)
+              progress = (y - smallerDetent) / (largerDetent - smallerDetent)
+              activeDetent = progress > 0.5 ? 'large' : 'medium'
+            }
+          }
+
+          // Call callbacks
+          onPositionChange({
+            y,
+            height: maxHeightRef.current - y,
+            activeDetent,
+            progress
+          })
+
+          if (onDetentChange) {
+            onDetentChange(activeDetent)
+          }
+        }
+
         return { memo: memo.memo, last: y }
       }
       if (last) {
@@ -539,7 +662,7 @@ const BaseSheet = forwardRef<HTMLDivElement, InteralSheetProps>(
           ></div>
           <TrapFocus>
             <div
-              ref={ref}
+              ref={elementRef}
               className={cx(`${prefix}-modal`, `${prefix}-stack`)}
               aria-modal="true"
               role="dialog"
@@ -598,19 +721,31 @@ if (__isDev__) {
   BaseSheet.displayName = 'BaseSheet'
 }
 
-export const Sheet = forwardRef<HTMLDivElement, SheetProps>(
+export const Sheet = forwardRef<SheetRef, SheetProps>(
   ({ open, onDismiss, onClose: onCloseProp = noop, ...rest }, ref) => {
     const [mounted, setMounted] = useState(open)
+    const baseSheetRef = useRef<BaseSheetRef>(null)
+    
     useEffect(() => {
       if (!open) return
       setMounted(open)
     }, [open])
+    
     const close = useCallback(() => {
       setMounted(false)
     }, [])
+    
     const onClose = useCallback(() => {
       onCloseProp()
     }, [onCloseProp])
+    
+    // Forward the ref to expose setDetent method
+    useImperativeHandle(ref, () => ({
+      setDetent: (detentName: string) => {
+        baseSheetRef.current?.setDetent(detentName)
+      }
+    }), [])
+    
     if (!mounted) return null
     return (
       <BaseSheet
@@ -618,7 +753,7 @@ export const Sheet = forwardRef<HTMLDivElement, SheetProps>(
         onDismiss={onDismiss}
         onClose={onClose}
         close={close}
-        ref={ref}
+        ref={baseSheetRef}
         {...rest}
       />
     )

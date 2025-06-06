@@ -24,3 +24,10 @@ export type SpringConfig = Partial<{
 }>
 
 export type ResizeSource = 'window' | 'maxheightprop' | 'element' | undefined
+
+export type SheetPositionData = {
+  y: number
+  height: number
+  activeDetent: string
+  progress: number
+}

@@ -85,10 +85,6 @@ body[style].sheet-open {
 }
 
 .sheet-stack, .sheet-modal:after {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
   touch-action: none;
 }
 
@@ -151,8 +147,7 @@ body[style].sheet-open {
 
 .sheet-header, .modal-header {
   z-index: 1;
-  user-select: none;
-  padding-top: calc(12px + env(safe-area-inset-top));
+  padding-top: 12px;
   padding-bottom: 12px;
   box-shadow: 0 1px 0 var(--border);
 
@@ -182,7 +177,7 @@ body[style].sheet-open {
   display: block;
   width: 36px;
   height: 6px;
-  top: calc(5px + env(safe-area-inset-top));
+  top: 5px;
   left: 50%;
   transform: translateX(-50%);
   color: var(--handle);
