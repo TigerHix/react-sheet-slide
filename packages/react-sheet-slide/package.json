@@ -30,10 +30,10 @@
     "build:dev:module": "microbundle --no-pkg-main --no-sourcemap --jsx React.createElement --define __isDev__=true -i src/index.tsx -o lib/react-sheet-slide.dev.js -f es",
     "build:dev:modern": "microbundle --no-pkg-main --no-sourcemap --jsx React.createElement --define __isDev__=true -i src/index.tsx -o lib/react-sheet-slide.dev.cjs -f umd",
     "clean": "rimraf lib/react-sheet-slide.js lib/react-sheet-slide.cjs lib/react-sheet-slide.dev.js lib/react-sheet-slide.dev.cjs style.css lib/*.d.ts lib/utils lib/hooks",
-    "build": "pnpm build:dev:module && pnpm build:dev:modern && pnpm build:module && pnpm build:modern && pnpm build:style",
+    "build": "bun run build:dev:module && bun run build:dev:modern && bun run build:module && bun run build:modern && bun run build:style",
     "test": "echo \"No tests \" && exit 0",
     "format": "prettier --write \"{tests,src}/**/*.{js,mjs,ts,tsx}\"",
-    "package": "pnpm publish --no-git-checks --access public"
+    "package": "bun publish --no-git-checks --access public"
   },
   "keywords": [
     "sheet",
@@ -73,6 +73,7 @@
     "microbundle": "^0.15.1",
     "prettier": "^3.3.2",
     "rimraf": "^5.0.8",
+    "tshy": "^3.0.2",
     "typescript": "^5.5.3"
   },
   "dependencies": {}

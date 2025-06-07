@@ -2,17 +2,20 @@
     "name": "react-sheet-slide",
     "version": "1.5.0",
     "description": "A responsive React draggable sheet and dialog component",
+    "workspaces": [
+        "packages/*"
+    ],
     "scripts": {
-      "package": "pnpm -C packages/react-sheet-slide package",
-      "build": "pnpm -C packages/react-sheet-slide build",
-      "test": "pnpm -C packages/react-sheet-slide test",
-      "test:coverage": "pnpm -C packages/react-sheet-slide test:coverage",
-      "clean": "pnpm -C packages/react-sheet-slide clean && pnpm -C packages/website clean",
-      "dev": "pnpm -C packages/website dev",
-      "build-site": "pnpm -C packages/website build",
-      "e2e-test": "pnpm -C packages/website test",
-      "e2e-test:ci": "pnpm -C packages/website test:ci",
-      "format": "prettier --write \"packages/**/{src,tests}/**/*.js\""
+        "package": "bun run --cwd packages/react-sheet-slide package",
+        "build": "bun run --cwd packages/react-sheet-slide build",
+        "test": "bun run --cwd packages/react-sheet-slide test",
+        "test:coverage": "bun run --cwd packages/react-sheet-slide test:coverage",
+        "clean": "bun run --cwd packages/react-sheet-slide clean && bun run --cwd packages/website clean",
+        "dev": "bun run --cwd packages/website dev",
+        "build-site": "bun run --cwd packages/website build",
+        "e2e-test": "bun run --cwd packages/website test",
+        "e2e-test:ci": "bun run --cwd packages/website test:ci",
+        "format": "prettier --write \"packages/**/{src,tests}/**/*.js\""
     },
     "repository": "https://github.com/woofers/react-sheet-slide",
     "author": "Jaxson Van Doorn",
@@ -34,5 +37,6 @@
         "react-dom",
         "react-spring",
         "react-use-gesture"
-      ]
-  }
+    ],
+    "packageManager": "bun@1.2.15"
+}
